@@ -1,0 +1,3 @@
+## Tool disponibili
+
+- **start** — Calcola data/ora correnti e stampa l'albero di `main/` (topologia completa del repo, `bot/` incluso), renderizzati dal template in `templates/output.md`. È il punto di ingresso di ogni sessione: è quello che `start.md`, in root, dice all'assistente di eseguire per primo — per sapere che giorno è, che ora è, e avere sotto gli occhi l'intera struttura del sistema prima di fare qualsiasi altra cosa.
