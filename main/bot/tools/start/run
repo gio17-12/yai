@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""start — bootstrap sessione: rigenera l'indice dei tool, poi stampa data/ora + albero di main/."""
+
+from pathlib import Path
+from datetime import datetime
+import re
+
+TOOL_DIR = Path(__file__).resolve().parent
+TEMPLATES_DIR = TOOL_DIR / "templates"
+ROOT_DIR = Path(".")            # assume cwd = main/
+TOOLS_DIR = Path("bot/tools")   # idem
+
+EXCLUDE = set()  # cartelle tecniche da nascondere dall'albero, oggi nessuna
+
+
+def tree(dir_path: Path, prefix: str = "") -> list[str]:
+    lines = []
+    entries = sorted(
+        (e for e in dir_path.iterdir() if e.name not in EXCLUDE),
+        key=lambda e: (e.is_file(), e.name),
+    )
+    for i, entry in enumerate(entries):
+        is_last = i == len(entries) - 1
+        connector = "└── " if is_last else "├── "
+        lines.append(f"{prefix}{connector}{entry.name}")
+        if entry.is_dir():
+            new_prefix = prefix + ("    " if is_last else "│   ")
+            lines.extend(tree(entry, new_prefix))
+    return lines
+
+
+def render_tree() -> str:
+    if not ROOT_DIR.is_dir():
+        return "⚠️  Root non trovata (atteso cwd = main/)."
+    lines = tree(ROOT_DIR)
+    return "\n".join(lines) if lines else "(vuota)"
+
+
+def extract_blurb(readme_text: str) -> str:
+    """Intero contenuto della sezione '## Descrizione'."""
+    match = re.search(r"## Descrizione\s*\n(.+?)(?=\n##|\Z)", readme_text, re.DOTALL)
+    if not match:
+        return "⚠️  manca la sezione Descrizione"
+    return " ".join(match.group(1).split())  # collassa newline/spazi in un unico paragrafo
+
+
+def scan_tools() -> list[tuple[str, str]]:
+    """Ritorna [(nome_tool, blurb), ...] per ogni sottocartella di bot/tools/ con un README.md."""
+    if not TOOLS_DIR.is_dir():
+        return []
+    results = []
+    for entry in sorted(TOOLS_DIR.iterdir()):
+        if not entry.is_dir():
+            continue
+        readme = entry / "README.md"
+        if not readme.exists():
+            continue
+        blurb = extract_blurb(readme.read_text())
+        results.append((entry.name, blurb))
+    return results
+
+
+def render_index() -> str:
+    tools = scan_tools()
+    if not tools:
+        lines = "(nessun tool trovato)"
+    else:
+        lines = "\n".join(f"- **{name}** — {blurb}" for name, blurb in tools)
+    template = (TEMPLATES_DIR / "index.md").read_text()
+    return template.replace("{{TOOLS}}", lines)
+
+
+def regen_tools_index() -> None:
+    try:
+        content = render_index()
+        (TOOLS_DIR / "README.md").write_text(content)
+    except Exception as e:
+        print(f"⚠️  Rigenerazione indice tool fallita: {e}\n")
+
+
+def main():
+    regen_tools_index()
+
+    now = datetime.now()
+    template = (TEMPLATES_DIR / "output.md").read_text()
+    output = (
+        template
+        .replace("{{DATE}}", now.strftime("%Y-%m-%d"))
+        .replace("{{WEEKDAY}}", now.strftime("%A"))
+        .replace("{{TIME}}", now.strftime("%H:%M"))
+        .replace("{{TREE}}", render_tree())
+    )
+    print(output)
+
+
+if __name__ == "__main__":
+    main()
