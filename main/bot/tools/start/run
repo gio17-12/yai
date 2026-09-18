@@ -12,8 +12,8 @@ import re
 TOOL_DIR = Path(__file__).resolve().parent
 CONFIG_DIR = TOOL_DIR / "config"
 TEMPLATES_DIR = CONFIG_DIR / "templates"
-ROOT_DIR = Path(".")            # assumes cwd = main/
-TOOLS_DIR = Path("bot/tools")   # idem
+ROOT_DIR = TOOL_DIR.parents[2]   # resolves main/ directory regardless of cwd
+TOOLS_DIR = TOOL_DIR.parent      # resolves bot/tools/ directory
 
 EXCLUDE = set()  # exact file or folder names to exclude in addition to hidden files
 

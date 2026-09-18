@@ -15,13 +15,13 @@ bot/tools/start/run
 The script performs two tasks in sequence: builds the directory tree, then injects it into a template along with the current date/time.
 
 **Behavior:**
-- **Input**: cwd = `main/`, actual filesystem
-- **Reads**: `config/templates/index.md`, `config/templates/output.md`, `bot/*/README.md`
+- **Input**: filesystem layout of `main/`
+- **Reads**: `config/templates/index.md`, `config/templates/output.md`, `bot/tools/*/README.md`
 - **Writes**: `bot/tools/README.md` (regenerated tool index)
 - **Output on stdout**: session context (date, time, tree)
 
-**Tree construction (`tree()`):** starts from the cwd and recursively descends into each subdirectory, skipping hidden files and folders (starting with `.`) and any names specified in `EXCLUDE` (a set defined at the top of `run`). Entries at each level are sorted alphabetically with directories before files, and the visual connectors (`├──`, `└──`, indentation with `│`) replicate standard shell `tree` output. There is no depth limit: it descends as long as subdirectories exist.
+**Tree construction (`tree()`):** starts from the `main/` root directory (resolved dynamically relative to the script's location) and recursively descends into each subdirectory, skipping hidden files and folders (starting with `.`) and any names specified in `EXCLUDE` (a set defined at the top of `run`). Entries at each level are sorted alphabetically with directories before files, and the visual connectors (`├──`, `└──`, indentation with `│`) replicate standard shell `tree` output. There is no depth limit: it descends as long as subdirectories exist.
 
 **Output composition:** the file `config/templates/output.md` contains static text plus four placeholders — `{{DATE}}`, `{{WEEKDAY}}`, `{{TIME}}`, `{{TREE}}`. The script reads the file as a string and performs direct string replacement (no external templating engine, just sequential `.replace()`) before printing the result to stdout.
 
-**Implicit assumption:** the script does not take or calculate the root path — it uses the cwd (`Path(".")`) as-is at execution time. It operates correctly only when run from within `main/`; it does not perform any checks to enforce this.
+**Path resolution:** the script dynamically resolves `main/` and `bot/tools/` relative to `__file__` (`TOOL_DIR.parents[2]`). It works seamlessly whether executed from inside `main/`, from the repository root (`main/bot/tools/start/run`), or from an absolute path.
