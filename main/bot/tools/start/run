@@ -42,10 +42,10 @@ def render_tree() -> str:
 
 
 def extract_blurb(readme_text: str) -> str:
-    """Entire content of the '## Description' section."""
+    """Extracts content of the '## Description' section, or empty string if not present."""
     match = re.search(r"## Description\s*\n(.+?)(?=\n##|\Z)", readme_text, re.DOTALL)
     if not match:
-        return "⚠️  missing Description section"
+        return ""
     return " ".join(match.group(1).split())  # collapse newlines/whitespace into a single paragraph
 
 
@@ -70,7 +70,10 @@ def render_index() -> str:
     if not tools:
         lines = "(no tools found)"
     else:
-        lines = "\n".join(f"- **{name}** — {blurb}" for name, blurb in tools)
+        lines = "\n".join(
+            f"- **{name}** — {blurb}" if blurb else f"- **{name}**"
+            for name, blurb in tools
+        )
     template = (TEMPLATES_DIR / "index.md").read_text()
     return template.replace("{{TOOLS}}", lines)
 

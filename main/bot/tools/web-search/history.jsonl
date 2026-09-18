@@ -1,0 +1,1 @@
+{"timestamp": "2026-09-18T15:45:41.225096+00:00", "tool": "web-search", "mode": "dry-run", "status": "PASS", "exit_code": 0, "args": {"query": "test query", "count": 5}, "telemetry": {"duration_ms": 0.44, "peak_rss_mb": 20.33, "cpu_user_ms": 24.03, "cpu_sys_ms": 8.27}}

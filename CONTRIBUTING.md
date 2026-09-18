@@ -14,20 +14,20 @@ When modifying anything in this system, put yourself in the shoes of the agent t
 Every tool available to the agent lives in `main/bot/tools/<name>/`.
 
 ### The Contract
-The **only mandatory invariant** for any tool is its `README.md`. It must contain exactly 4 sections:
+The **only mandatory invariant** for any tool is its `README.md`. It serves as the single source of truth and behavioral contract:
 1. `## Description`: what the tool does (used by the `start` script to generate the tools index).
-2. `## How to use it`: invocation syntax, parameters, flags, and prerequisites. **The agent reads this section to learn how to run the tool.**
+2. `## How to use it`: invocation syntax, parameters, and flags (such as `--dry-run`). **The agent reads this section to learn how to run the tool.**
 3. `## Examples`: practical command-line examples.
-4. `## Details`: internal mechanics, assumptions (e.g. expected cwd), resources read/written.
+4. `## Details`: inputs, outputs, side effects (files, network, subprocesses), and assumptions.
 
 Tools can have arbitrary files, scripts, or structures inside their folder. The agent does not assume a tool is named `run`: it reads `bot/tools/<name>/README.md` first to know how to execute it.
 
 ### Recommended Standards
-- **`run`** — executable script (`chmod +x`). For Python scripts, use `uv` with PEP 723 inline script metadata (`#!/usr/bin/env -S uv run --script` and a `# /// script` block) for frictionless execution.
-- **`verify/`** — verification suite containing `dry-run` (non-destructive execution simulator) and `history.jsonl` (append-only telemetry of runs).
+- **`run`** — single executable script (`chmod +x`) supporting both normal execution and an optional `--dry-run` simulation flag. For Python scripts, use `uv` with PEP 723 inline script metadata (`#!/usr/bin/env -S uv run --script` and a `# /// script` block) for frictionless execution.
+- **`history.jsonl`** — optional append-only telemetry log of runs in JSON Lines format.
 
 **Core rule:** every time you create or modify an executable script:
 1. **Make it executable:** `chmod +x <path-to-script>`
-2. **Test it:** execute it directly from within `main/` and verify that output and side effects match expectations.
+2. **Test it:** execute both real and `--dry-run` directly from within `main/` and verify that output and side effects match expectations.
 
 The `start` tool is the session bootstrap: it regenerates the tools index in `main/bot/tools/README.md` and prints the current date, time, and directory tree of `main/`.

@@ -58,42 +58,42 @@ Because tools can take varied forms, **the agent does not assume a tool is invok
 
 ### Recommended Tool Layout (The Gold Standard)
 
-To ensure the best ergonomics, ease of execution for agents, and full audibility for humans, the recommended layout is:
+To ensure the best ergonomics, ease of execution for agents, and full audibility for humans without code duplication, the recommended layout is:
 
 ```
 main/bot/tools/<tool-name>/
-├── README.md     ← tool documentation (mandatory)
-├── run           ← executable script (chmod +x, recommended)
-├── verify/       ← verification & audit chamber (recommended)
-│   ├── dry-run   ← executable: simulation mode with zero mutations
-│   └── history.jsonl ← append-only telemetry of runs and metrics
+├── README.md     ← tool documentation & behavioral contract (mandatory)
+├── run           ← executable script with optional --dry-run (chmod +x, recommended)
+├── history.jsonl ← append-only telemetry of runs and metrics (optional)
 └── ...           ← any auxiliary scripts, configs, templates, DAGs, etc.
 ```
 
-### 1. Documentation: `README.md` (Mandatory)
+### 1. Documentation & Contract: `README.md` (Mandatory)
 
-Every tool's `README.md` must contain exactly these **4 standard sections**:
+The `README.md` is the single source of truth for both humans and agents. It serves as both user documentation and the behavioral contract (Inputs, Outputs, Side Effects).
+
+We recommend structuring it with these **4 standard sections**:
 
 ```markdown
 ## Description
-Clearly explains what the tool does to determine if it is the right tool to use.
-Note: this section is automatically parsed by the start script to regenerate the index in main/bot/tools/README.md.
+Clearly explains what the tool does.
+Note: parsed by the start script to populate main/bot/tools/README.md (if omitted, the tool is still indexed by name).
 
 ## How to use it
-Explains the invocation syntax, expected arguments, flags, and any environment/dependency requirements.
+Explains invocation syntax, parameters, and flags (such as --dry-run).
 Agents rely on this section to know how to execute the tool!
 
 ## Examples
 ```bash
 bot/tools/<tool-name>/run arg1 arg2
-# or: python -m tool_package --flag
+bot/tools/<tool-name>/run arg1 --dry-run
 ```
 
 ## Details
-Explains the internal mechanics of the tool in detail:
-- Assumptions (e.g. expected cwd)
-- Resources read or written (side effects)
-- Algorithmic logic, templates, or external services used
+Specifies the behavioral contract:
+- **Inputs**: expected parameters, environment variables, secrets.
+- **Outputs**: STDOUT format, STDERR diagnostics, exit codes.
+- **Side Effects**: network calls, file reads/writes/deletions, subprocesses.
 ```
 
 ### 2. Executable script: `run` (Recommended)
@@ -115,31 +115,30 @@ For **Python** tools, the project standard is to use **`uv` with inline script m
 # Your Python code here
 ```
 
-#### Why `uv` is recommended:
-- **Zero manual virtualenvs:** no need to create or activate virtual environments in the repository.
-- **Isolated environment per tool:** each tool gets its own separate virtual environment (managed in `~/.cache/uv/environments-v2/`). Dependencies of one tool will never conflict with another.
-- **Automatic cache and instant startup:** downloads declared dependencies on first run and launches in ~10ms on subsequent runs.
-- **Transparent invocation:** the agent simply executes the command declared in `README.md`.
+#### Native `--dry-run` Support
+To make tools inspectable without code duplication, tools are encouraged to support a `--dry-run` flag directly in `run`. In dry-run mode, the script:
+1. Validates inputs and environment without making destructive or external changes.
+2. Prints an execution plan (what network calls or file mutations *would* happen).
+3. Prints an output format preview.
+4. Measures execution telemetry (duration, peak RAM) and records the receipt to `history.jsonl`.
 
-### 3. Verification & Auditing: `verify/` (Recommended)
+### 3. Telemetry & Auditing: `history.jsonl` (Optional)
 
-To make vibecoded tools understandable, testable, and auditable without forcing humans to read through hundreds of lines of code:
-- **`verify/dry-run`**: A non-destructive executable that simulates execution, logging what inputs were parsed and what side-effects (file writes, reads, network calls) would have happened without actually mutating anything.
-- **`verify/history.jsonl`**: An append-only log tracking telemetry from runs (wall-clock time, peak RSS memory, CPU time, exit code, and detected mutations).
+Tools can record execution receipts (timestamp, mode, exit code, duration in ms, peak RSS memory in MB, and effect verification) to `history.jsonl` in JSON Lines format for auditing and debugging.
 
 ### 4. Permissions and Testing
 
-Whenever an executable script (like `run` or `verify/dry-run`) is created or modified:
+Whenever an executable script (like `run`) is created or modified:
 1. **Make it executable:**
    ```bash
    chmod +x main/bot/tools/<tool-name>/run
    ```
 2. **Test execution:**
-   Run the script and verify that stdout/stderr output and any side effects match expectations.
+   Run both the real execution and `--dry-run` to verify that output, exit codes, and side effects match expectations.
 
 ### Automatic Tools Index
 
-When `bot/tools/start/run` is executed, the script scans all subfolders in `bot/tools/`, extracts the `## Description` section from each tool's `README.md`, and automatically regenerates the [main/bot/tools/README.md](main/bot/tools/README.md) index file.
+When `bot/tools/start/run` is executed, the script scans all subfolders in `bot/tools/`, extracts the `## Description` section from each tool's `README.md` (if present), and automatically regenerates the [main/bot/tools/README.md](main/bot/tools/README.md) index file.
 
 ## Full Repository Structure
 
