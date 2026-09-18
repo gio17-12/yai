@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -e
+
+echo "🚀 Setting up yai environment..."
+echo ""
+
+# --- 1. Check and install uv if needed ---
+if command -v uv >/dev/null 2>&1; then
+    echo "  ✅ uv is already installed: $(uv --version)"
+else
+    echo "  📦 uv not found. Installing..."
+    if command -v brew >/dev/null 2>&1; then
+        echo "     -> Using Homebrew..."
+        brew install uv
+    else
+        echo "     -> Using official standalone installer..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
+    echo "  ✅ uv successfully installed: $(uv --version)"
+fi
+
+# --- (Placeholder for future prerequisites) ---
+
+echo ""
+echo "✨ All set! To get started:"
+echo "   cd main"
+echo "   launch your harness and tell it: 'read start.md'"

@@ -1,22 +1,27 @@
-#!/usr/bin/env python3
-"""start — bootstrap sessione: rigenera l'indice dei tool, poi stampa data/ora + albero di main/."""
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+"""start — session bootstrap: regenerates tools index, then prints date/time + directory tree of main/."""
 
 from pathlib import Path
 from datetime import datetime
 import re
 
 TOOL_DIR = Path(__file__).resolve().parent
-TEMPLATES_DIR = TOOL_DIR / "templates"
-ROOT_DIR = Path(".")            # assume cwd = main/
+CONFIG_DIR = TOOL_DIR / "config"
+TEMPLATES_DIR = CONFIG_DIR / "templates"
+ROOT_DIR = Path(".")            # assumes cwd = main/
 TOOLS_DIR = Path("bot/tools")   # idem
 
-EXCLUDE = set()  # cartelle tecniche da nascondere dall'albero, oggi nessuna
+EXCLUDE = set()  # exact file or folder names to exclude in addition to hidden files
 
 
 def tree(dir_path: Path, prefix: str = "") -> list[str]:
     lines = []
     entries = sorted(
-        (e for e in dir_path.iterdir() if e.name not in EXCLUDE),
+        (e for e in dir_path.iterdir() if not e.name.startswith(".") and e.name not in EXCLUDE),
         key=lambda e: (e.is_file(), e.name),
     )
     for i, entry in enumerate(entries):
@@ -31,26 +36,26 @@ def tree(dir_path: Path, prefix: str = "") -> list[str]:
 
 def render_tree() -> str:
     if not ROOT_DIR.is_dir():
-        return "⚠️  Root non trovata (atteso cwd = main/)."
+        return "⚠️  Root not found (expected cwd = main/)."
     lines = tree(ROOT_DIR)
-    return "\n".join(lines) if lines else "(vuota)"
+    return "\n".join(lines) if lines else "(empty)"
 
 
 def extract_blurb(readme_text: str) -> str:
-    """Intero contenuto della sezione '## Descrizione'."""
-    match = re.search(r"## Descrizione\s*\n(.+?)(?=\n##|\Z)", readme_text, re.DOTALL)
+    """Entire content of the '## Description' section."""
+    match = re.search(r"## Description\s*\n(.+?)(?=\n##|\Z)", readme_text, re.DOTALL)
     if not match:
-        return "⚠️  manca la sezione Descrizione"
-    return " ".join(match.group(1).split())  # collassa newline/spazi in un unico paragrafo
+        return "⚠️  missing Description section"
+    return " ".join(match.group(1).split())  # collapse newlines/whitespace into a single paragraph
 
 
 def scan_tools() -> list[tuple[str, str]]:
-    """Ritorna [(nome_tool, blurb), ...] per ogni sottocartella di bot/tools/ con un README.md."""
+    """Returns [(tool_name, blurb), ...] for each subfolder in bot/tools/ with a README.md."""
     if not TOOLS_DIR.is_dir():
         return []
     results = []
     for entry in sorted(TOOLS_DIR.iterdir()):
-        if not entry.is_dir():
+        if not entry.is_dir() or entry.name.startswith("."):
             continue
         readme = entry / "README.md"
         if not readme.exists():
@@ -63,7 +68,7 @@ def scan_tools() -> list[tuple[str, str]]:
 def render_index() -> str:
     tools = scan_tools()
     if not tools:
-        lines = "(nessun tool trovato)"
+        lines = "(no tools found)"
     else:
         lines = "\n".join(f"- **{name}** — {blurb}" for name, blurb in tools)
     template = (TEMPLATES_DIR / "index.md").read_text()
@@ -75,7 +80,7 @@ def regen_tools_index() -> None:
         content = render_index()
         (TOOLS_DIR / "README.md").write_text(content)
     except Exception as e:
-        print(f"⚠️  Rigenerazione indice tool fallita: {e}\n")
+        print(f"⚠️  Tool index regeneration failed: {e}\n")
 
 
 def main():

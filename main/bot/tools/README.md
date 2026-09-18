@@ -1,3 +1,3 @@
-## Tool disponibili
+## Available Tools
 
-- **start** — Calcola data/ora correnti e stampa l'albero di `main/` (topologia completa del repo, `bot/` incluso), renderizzati dal template in `templates/output.md`. È il punto di ingresso di ogni sessione: è quello che `start.md`, in root, dice all'assistente di eseguire per primo — per sapere che giorno è, che ora è, e avere sotto gli occhi l'intera struttura del sistema prima di fare qualsiasi altra cosa.
+- **start** — Computes the current date/time and prints the directory tree of `main/` (full repo topology, including `bot/`), rendered from the template in `config/templates/output.md`. It is the entry point of every session: it is what `start.md`, in the root, instructs the assistant to execute first — to know what day it is, what time it is, and have the full system layout in view before doing anything else.

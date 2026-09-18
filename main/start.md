@@ -1,2 +1,2 @@
-Se stai leggendo questo file, sei un assistente AI, e il tuo ruolo è assistere l'utente.
-Esegui il comando `bot/tools/start/run` per ottenere il contesto necessario a operare.
+If you are reading this file, you are an AI assistant, and your role is to assist the user.
+Run the command `bot/tools/start/run` to obtain the necessary context to operate.
