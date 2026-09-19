@@ -10,8 +10,7 @@ from datetime import datetime
 import re
 
 TOOL_DIR = Path(__file__).resolve().parent
-CONFIG_DIR = TOOL_DIR / "config"
-TEMPLATES_DIR = CONFIG_DIR / "templates"
+TEMPLATES_DIR = TOOL_DIR / "templates" if (TOOL_DIR / "templates").is_dir() else (TOOL_DIR / "config" / "templates")
 ROOT_DIR = TOOL_DIR.parents[2]   # resolves main/ directory regardless of cwd
 TOOLS_DIR = TOOL_DIR.parent      # resolves bot/tools/ directory
 

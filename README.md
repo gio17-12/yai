@@ -35,128 +35,57 @@ The `./setup` script automatically manages requirements, but if you prefer to co
   curl -LsSf https://astral.sh/uv/install.sh | sh
   ```
 
-## Adding a New Tool
+## Why should i install UV?
 
-Tools are commands, scripts, or systems that the agent can launch to perform actions. Each tool lives in its own subfolder inside `main/bot/tools/<tool-name>/`.
+The only standard tool implemented by me is the start/ tool, which helps the agent get some context at the start of the session. That tool requires UV. If you don't want to use my tool, you can avoid installing UV.
 
-### The Tool Contract
+## Other notes (still to organize - don't rely on them)
 
-The **only mandatory requirement** for a tool is its documentation file:
+The user opens the `main/` directory, starts their harness in that directory, and tells it: "read start.md".
+The agent reads `start.md` and runs the specified command.
+From that point on, the agent will know how to proceed.
 
-```
-main/bot/tools/<tool-name>/
-└── README.md     ← mandatory (4 standard sections)
-```
+The agent's world consists of 3 parts, with a folder for each: `tasks`, `memory`, `objects`.
+These are designed to be inspected and modified similarly by both the agent and the human operator.
 
-Everything else inside the tool folder is flexible: a tool can be a single standalone script, a multi-file Python module, an external CLI/Docker wrapper, an Airflow DAG, or any arbitrary file structure.
+## Guiding Principle (still to organize - don't rely on them)
 
-Because tools can take varied forms, **the agent does not assume a tool is invoked via `run`**. Instead, the agent follows a **two-tier discovery protocol**:
-1. At session start, the agent inspects [main/bot/tools/README.md](main/bot/tools/README.md) to see what tools exist and their general descriptions.
-2. When the agent needs to use a specific tool, it reads that tool's `main/bot/tools/<tool-name>/README.md`, where the **`## How to use it`** section provides the exact invocation syntax and prerequisites.
+When modifying anything in this system, put yourself in the shoes of the agent that will use it: read the prompts and imagine what the agent would do step-by-step. If in doubt, ask the human operator what happened in the session that prompted the changes or additions.
 
----
+these are some notes that still need to be verified, so don't reply on them.
+"
+The user opens the `main/` directory, starts their harness in that directory, and tells it: "read start.md".
+The agent reads `start.md` and runs the specified command.
+From that point on, the agent will know how to proceed.
 
-### Recommended Tool Layout (The Gold Standard)
+The agent's world consists of 3 parts, with a folder for each: `tasks`, `memory`, `objects`.
+These are designed to be inspected and modified similarly by both the agent and the human operator.
 
-To ensure the best ergonomics, ease of execution for agents, and full audibility for humans without code duplication, the recommended layout is:
+## Guiding Principle (still to organize - don't rely on them)
 
-```
-main/bot/tools/<tool-name>/
-├── README.md     ← tool documentation & behavioral contract (mandatory)
-├── run           ← executable script with optional --dry-run (chmod +x, recommended)
-├── history.jsonl ← append-only telemetry of runs and metrics (optional)
-└── ...           ← any auxiliary scripts, configs, templates, DAGs, etc.
-```
+When modifying anything in this system, put yourself in the shoes of the agent that will use it: read the prompts and imagine what the agent would do step-by-step. If in doubt, ask the human operator what happened in the session that prompted the changes or additions.
 
-### 1. Documentation & Contract: `README.md` (Mandatory)
+## Tools (still to organize - don't rely on them)
 
-The `README.md` is the single source of truth for both humans and agents. It serves as both user documentation and the behavioral contract (Inputs, Outputs, Side Effects).
+For now, only the start/ tool has been implemented. Here are described the rules for that specific tool.
+It's not decided that these rules will apply also to other tools.
+"
+the tool lives in `main/bot/tools/<name>/` and contains:
+- **`README.md`** — tool documentation. Recommended sections:
+  1. `## Description`: what the tool does (parsed by `start` to build the tools catalog).
+  2. `## How to use it`: invocation syntax, arguments, and options.
+  3. `## Examples`: practical command-line examples.
+  4. `## Details`: internal mechanics, assumptions, resources read or written.
+- **`run`** — executable script (`chmod +x`).
+  - For Python scripts, use `uv` with PEP 723 inline script metadata (`#!/usr/bin/env -S uv run --script` and a `# /// script` block) to declare dependencies cleanly.
 
-We recommend structuring it with these **4 standard sections**:
+Supporting files or templates needed by the tool can live alongside `run` or in subdirectories within the tool folder.
 
-```markdown
-## Description
-Clearly explains what the tool does.
-Note: parsed by the start script to populate main/bot/tools/README.md (if omitted, the tool is still indexed by name).
+**Core rules:** every time you create or modify a tool:
+1. **Make it executable:** `chmod +x main/bot/tools/<name>/run`
+2. **Test it:** execute it directly from within `main/` and verify that output and behavior match expectations.
 
-## How to use it
-Explains invocation syntax, parameters, and flags (such as --dry-run).
-Agents rely on this section to know how to execute the tool!
-
-## Examples
-```bash
-bot/tools/<tool-name>/run arg1 arg2
-bot/tools/<tool-name>/run arg1 --dry-run
-```
-
-## Details
-Specifies the behavioral contract:
-- **Inputs**: expected parameters, environment variables, secrets.
-- **Outputs**: STDOUT format, STDERR diagnostics, exit codes.
-- **Side Effects**: network calls, file reads/writes/deletions, subprocesses.
-```
-
-### 2. Executable script: `run` (Recommended)
-
-When possible, provide a `run` entry point script with `chmod +x`.
-
-For **Python** tools, the project standard is to use **`uv` with inline script metadata (PEP 723)**:
-
-```python
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     # Add any external libraries here, e.g.:
-#     # "httpx",
-# ]
-# ///
-
-# Your Python code here
-```
-
-#### Native `--dry-run` Support
-To make tools inspectable without code duplication, tools are encouraged to support a `--dry-run` flag directly in `run`. In dry-run mode, the script:
-1. Validates inputs and environment without making destructive or external changes.
-2. Prints an execution plan (what network calls or file mutations *would* happen).
-3. Prints an output format preview.
-4. Measures execution telemetry (duration, peak RAM) and records the receipt to `history.jsonl`.
-
-### 3. Telemetry & Auditing: `history.jsonl` (Optional)
-
-Tools can record execution receipts (timestamp, mode, exit code, duration in ms, peak RSS memory in MB, and effect verification) to `history.jsonl` in JSON Lines format for auditing and debugging.
-
-### 4. Permissions and Testing
-
-Whenever an executable script (like `run`) is created or modified:
-1. **Make it executable:**
-   ```bash
-   chmod +x main/bot/tools/<tool-name>/run
-   ```
-2. **Test execution:**
-   Run both the real execution and `--dry-run` to verify that output, exit codes, and side effects match expectations.
-
-### Automatic Tools Index
-
-When `bot/tools/start/run` is executed, the script scans all subfolders in `bot/tools/`, extracts the `## Description` section from each tool's `README.md` (if present), and automatically regenerates the [main/bot/tools/README.md](main/bot/tools/README.md) index file.
-
-## Full Repository Structure
-
-```
-yai/
-├── CONTRIBUTING.md    ← guiding principles and conventions (read first)
-├── README.md          ← this file (overview and tool development guide)
-├── setup              ← automated prerequisites setup script
-├── LICENSE
-├── .gitignore
-└── main/              ← agent runtime (the harness operates in here)
-    ├── start.md       ← entry point for the agent
-    ├── memory/        ← persistent memory
-    ├── tasks/         ← tasks to accomplish
-    ├── objects/       ← produced artifacts
-    └── bot/
-        └── tools/     ← tools executable by the agent
-            ├── README.md  ← auto-generated index of available tools
-            ├── start/     ← session bootstrap tool
-            └── ...        ← other tools
-```
+The `start` tool is the session bootstrap: it regenerates the tools index in `main/bot/tools/README.md` and prints the current date, time, and directory tree of `main/`.
+"
+"
+.
